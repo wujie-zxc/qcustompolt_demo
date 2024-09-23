@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED PrintSupport Concurrent)
+find_package(Qt5 COMPONENTS Widgets REQUIRED Sql PrintSupport Concurrent)
 
 set(qcustomplot_src
     qcustomplot-source/qcustomplot.h
@@ -27,6 +27,8 @@ add_executable(polt
     mainwindow.ui
     showwidget.h
     showwidget.cpp
+    wdatabase.h
+    wdatabase.cpp
    ${qcustomplot_src}
     )
 
@@ -34,4 +36,5 @@ target_link_libraries(polt PRIVATE
     Qt5::Widgets
     Qt5::PrintSupport
     Qt5::Concurrent
+    Qt5::Sql
     )

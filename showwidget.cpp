@@ -6,12 +6,15 @@ ShowWidget::ShowWidget(QWidget *parent) : QWidget(parent)
 {
     polt_ = new QCustomPlot(this);
     plot_1_ = new QCustomPlot(this);
+    plot_2_ = new QCustomPlot(this);
 
     QGridLayout *glay = new QGridLayout(this);
     glay->addWidget(polt_, 0, 0, 1, 1);
     glay->addWidget(plot_1_, 0, 1, 1, 1);
+    glay->addWidget(plot_2_, 1, 0, 1, 1);
     testcase_1();
     testcase_2();
+    testcase_3();
 }
 
 void ShowWidget::testcase_1()
@@ -205,4 +208,86 @@ void ShowWidget::testcase_2()
     customPlot->legend->setFont(legendFont);
     //许用户通过拖动和缩放来与图表进行交互
     customPlot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom);
+}
+
+void ShowWidget::testcase_3()
+{
+    auto customPlot = plot_2_;
+    QLinearGradient gradient(0, 0, 0, 400);
+    gradient.setColorAt(0, QColor(90, 90, 90));
+    gradient.setColorAt(0.38, QColor(105, 105, 105));
+    gradient.setColorAt(1, QColor(70, 70, 70));
+    customPlot->setBackground(QBrush(gradient));
+
+    QCPBars *regen = new QCPBars(customPlot->xAxis, customPlot->yAxis);
+    QCPBars *nuclear = new QCPBars(customPlot->xAxis, customPlot->yAxis);
+    QCPBars *fossil = new QCPBars(customPlot->xAxis, customPlot->yAxis);
+    regen->setAntialiased(false); // gives more crisp, pixel aligned bar borders
+    nuclear->setAntialiased(false);
+    fossil->setAntialiased(false);
+    regen->setStackingGap(1);
+    nuclear->setStackingGap(1);
+    fossil->setStackingGap(1);
+    // set names and colors:
+    fossil->setName("Fossil fuels");
+    fossil->setPen(QPen(QColor(111, 9, 176).lighter(170)));
+    fossil->setBrush(QColor(111, 9, 176));
+    nuclear->setName("Nuclear");
+    nuclear->setPen(QPen(QColor(250, 170, 20).lighter(150)));
+    nuclear->setBrush(QColor(250, 170, 20));
+    regen->setName("Regenerative");
+    regen->setPen(QPen(QColor(0, 168, 140).lighter(130)));
+    regen->setBrush(QColor(0, 168, 140));
+
+    QVector<double> ticks;
+    QVector<QString> labels;
+    ticks << 1 << 2 << 3 << 4 << 5 << 6 << 7;
+    labels << "USA" << "Japan" << "Germany" << "France" << "UK" << "Italy" << "Canada";
+    QSharedPointer<QCPAxisTickerText> textTicker(new QCPAxisTickerText);
+    textTicker->addTicks(ticks, labels);
+    customPlot->xAxis->setTicker(textTicker);
+    customPlot->xAxis->setTickLabelRotation(60);
+    customPlot->xAxis->setSubTicks(false);
+    customPlot->xAxis->setTickLength(0, 4);
+    customPlot->xAxis->setRange(0, 8);
+    customPlot->xAxis->setBasePen(QPen(Qt::white));
+    customPlot->xAxis->setTickPen(QPen(Qt::white));
+    customPlot->xAxis->grid()->setVisible(true);
+    customPlot->xAxis->grid()->setPen(QPen(QColor(130, 130, 130), 0, Qt::DotLine));
+    customPlot->xAxis->setTickLabelColor(Qt::white);
+    customPlot->xAxis->setLabelColor(Qt::white);
+
+    // prepare y axis:
+    customPlot->yAxis->setRange(0, 12.1);
+    customPlot->yAxis->setPadding(5); // a bit more space to the left border
+    customPlot->yAxis->setLabel("Power Consumption in\nKilowatts per Capita (2007)");
+    customPlot->yAxis->setBasePen(QPen(Qt::white));
+    customPlot->yAxis->setTickPen(QPen(Qt::white));
+    customPlot->yAxis->setSubTickPen(QPen(Qt::white));
+    customPlot->yAxis->grid()->setSubGridVisible(true);
+    customPlot->yAxis->setTickLabelColor(Qt::white);
+    customPlot->yAxis->setLabelColor(Qt::white);
+    customPlot->yAxis->grid()->setPen(QPen(QColor(130, 130, 130), 0, Qt::SolidLine));
+    customPlot->yAxis->grid()->setSubGridPen(QPen(QColor(130, 130, 130), 0, Qt::DotLine));
+
+    QCPBarsGroup *group = new QCPBarsGroup(customPlot);
+    QList<QCPBars*> bars;
+    bars << fossil << nuclear << regen;
+    foreach (QCPBars *bar, bars) {
+      // 设置柱状图的宽度类型为以key坐标轴计算宽度的大小，其实默认就是这种方式
+      bar->setWidthType(QCPBars::wtPlotCoords);
+      bar->setWidth(bar->width() / bars.size()); // 设置柱状图的宽度大小
+      group->append(bar);  // 将柱状图加入柱状图分组中
+    }
+    group->setSpacingType(QCPBarsGroup::stAbsolute);  // 设置组内柱状图的间距，按像素
+    group->setSpacing(2);     // 设置较小的间距值，这样看起来更紧凑
+
+    QVector<double> fossilData, nuclearData, regenData;
+    fossilData  << 0.86*10.5 << 0.83*5.5 << 0.84*5.5 << 0.52*5.8 << 0.89*5.2 << 0.90*4.2 << 0.67*11.2;
+    nuclearData << 0.08*10.5 << 0.12*5.5 << 0.12*5.5 << 0.40*5.8 << 0.09*5.2 << 0.00*4.2 << 0.07*11.2;
+    regenData   << 0.06*10.5 << 0.05*5.5 << 0.04*5.5 << 0.06*5.8 << 0.02*5.2 << 0.07*4.2 << 0.25*11.2;
+    fossil->setData(ticks, fossilData);
+    nuclear->setData(ticks, nuclearData);
+    regen->setData(ticks, regenData);
+
 }
