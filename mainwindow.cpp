@@ -15,30 +15,21 @@ MainWindow::MainWindow(QWidget *parent)
     setCentralWidget(wd_);
 
     auto &inter = WDataBase::instance();
-    QDate start_day = QDate::fromString("2024_09_02", "yyyy_MM_dd");
 
-    for (int i = 0; i <40; i++){
-        if (i == 1 || i ==10 || i==20 || i== 30) {
-            continue;
-        }
-        DailyWeldData obj;
-        obj.date = start_day.addDays(i).toString("yyyy_MM_dd");
-        obj.weld_count = i+1;
-        inter.addDailyWeldData(obj);
-    }
-
-    start_day = QDate::fromString("2024_09_02", "yyyy_MM_dd");
-    QDate end_day =  QDate::fromString("2024_10_07", "yyyy_MM_dd");
-    QMap<QDate, DailyWeldData> map;
-    inter.getWeldDataInDateRange(start_day, end_day, map);
-    for (const auto& item: map){
-//        qDebug() << item.date;
-//        qDebug() << item.welding_time;
-//        qDebug() << item.teaching_time;
-//        qDebug() << item.flat_weld_length;
-//        qDebug() << item.verical_weld_length;
-//        qDebug() << item.weld_count;
-    }
+    QDate end_day = QDate::currentDate();
+    QDate start_day = end_day.addDays(-5);
+    int i = 1;
+    for (QDate date = start_day; date <= end_day; date = date.addDays(1)) {
+             DailyWeldData obj;
+             obj.date = date.toString("yyyy_MM_dd");
+             obj.flat_weld_length = i*2;
+             obj.verical_weld_length = i*3;
+             obj.welding_time = i*20;
+             obj.teaching_time = i*10;
+             obj.weld_count = i*5;
+             inter.addDailyWeldData(obj);
+             i++;
+      }
 
     inter.addTodayProjectState();
 }

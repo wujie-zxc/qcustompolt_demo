@@ -1,20 +1,25 @@
 #include "showwidget.h"
 #include <QLayout>
 #include <QVector>
+#include "wdatabase.h"
+#include <math.h>
 
 ShowWidget::ShowWidget(QWidget *parent) : QWidget(parent)
 {
     polt_ = new QCustomPlot(this);
     plot_1_ = new QCustomPlot(this);
     plot_2_ = new QCustomPlot(this);
+    plot_bar_ = new QCustomPlot(this);
 
     QGridLayout *glay = new QGridLayout(this);
     glay->addWidget(polt_, 0, 0, 1, 1);
     glay->addWidget(plot_1_, 0, 1, 1, 1);
     glay->addWidget(plot_2_, 1, 0, 1, 1);
+    glay->addWidget(plot_bar_, 1, 1, 1, 1);
     testcase_1();
     testcase_2();
     testcase_3();
+    update_bar1();
 }
 
 void ShowWidget::testcase_1()
@@ -290,4 +295,82 @@ void ShowWidget::testcase_3()
     nuclear->setData(ticks, nuclearData);
     regen->setData(ticks, regenData);
 
+}
+
+void ShowWidget::update_bar1()
+{
+    auto customPlot = plot_bar_;
+    QMap<QDate,DailyWeldData> map;
+    WDataBase::instance().getWeldDataInDateRange(QDate::currentDate().addDays(-5), QDate::currentDate(), map);
+
+    QCPBars *total_bar = new QCPBars(customPlot->xAxis, customPlot->yAxis);
+    QCPBars *falt_bar = new QCPBars(customPlot->xAxis, customPlot->yAxis);
+    QCPBars *ver_bar = new QCPBars(customPlot->xAxis, customPlot->yAxis);
+    total_bar->setAntialiased(false); // gives more crisp, pixel aligned bar borders
+    falt_bar->setAntialiased(false);
+    ver_bar->setAntialiased(false);
+    total_bar->setName(tr("焊接总长度(米)"));
+    total_bar->setPen(QPen(QColor(65,105,225).lighter(170)));
+    total_bar->setBrush(QColor(65,105,225));
+    falt_bar->setName(tr("平焊长度(米)"));
+    falt_bar->setPen(QPen(QColor(0,128,0).lighter(170)));
+    falt_bar->setBrush(QColor(0,128,0));
+    ver_bar->setName(tr("立焊长度(米)"));
+    ver_bar->setPen(QPen(QColor(255,99,71).lighter(170)));
+    ver_bar->setBrush(QColor(255,99,71));
+
+    QList<QDate> dates = map.keys();
+    QVector<double> ticks;
+    QVector<QString> labels;
+   for (int i = 0; i < dates.size(); i++){
+       ticks.append(i+1);
+       labels.append(dates[i].toString("MM_dd"));
+   }
+   QSharedPointer<QCPAxisTickerText> textTicker(new QCPAxisTickerText);
+   textTicker->addTicks(ticks, labels);
+   customPlot->xAxis->setTicker(textTicker);
+   customPlot->xAxis->setRange(0, ticks.count()+1);
+   customPlot->xAxis->grid()->setVisible(false); // 隐藏竖直网格线
+
+
+   customPlot->yAxis->setPadding(5);
+
+   QCPBarsGroup *group = new QCPBarsGroup(customPlot);
+   QList<QCPBars*> bars;
+   bars << total_bar <<  falt_bar << ver_bar;
+   foreach (QCPBars *bar, bars) {
+     bar->setWidthType(QCPBars::wtPlotCoords);
+     bar->setWidth(bar->width() / bars.size());
+     group->append(bar);
+   }
+   group->setSpacingType(QCPBarsGroup::stAbsolute);
+   group->setSpacing(2);
+
+   double max_y;
+   QVector<double> total_y, flat_y, ver_y;
+   for (const auto &item :map) {
+        flat_y.append(item.flat_weld_length);
+        ver_y.append(item.verical_weld_length);
+        total_y.append(item.flat_weld_length + item.verical_weld_length);
+        double max = item.flat_weld_length + item.verical_weld_length;
+        max_y =  max_y > max ? max_y : max;
+   }
+   total_bar->setData(ticks, total_y);
+   falt_bar->setData(ticks, flat_y);
+   ver_bar->setData(ticks, ver_y);
+   customPlot->yAxis->setRange(0, max_y + 10);
+
+
+
+   customPlot->legend->setVisible(true);
+   customPlot->axisRect()->insetLayout()->setInsetAlignment(0, Qt::AlignTop|Qt::AlignHCenter);
+   customPlot->legend->setBrush(QColor(255, 255, 255, 100));
+   customPlot->legend->setBorderPen(Qt::NoPen);
+   QFont legendFont = font();
+   legendFont.setPointSize(10);
+   customPlot->legend->setFont(legendFont);
+   customPlot->legend->setFillOrder(QCPLayoutGrid::foColumnsFirst);
+
+
+ //  customPlot->rescaleAxes();
 }
